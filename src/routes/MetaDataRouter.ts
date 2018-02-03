@@ -22,6 +22,7 @@ export class MetaDataRouter {
         this.router.post('/', this.metadataCreate);
         this.router.get('/show', this.showMetaData);
         this.router.get('/retrieve_triggers', this.retrieveTriggers);
+        this.router.get('/retrieve_custom_objects', this.retrieveCustomObjects);
     }
 
     /**
@@ -199,8 +200,110 @@ export class MetaDataRouter {
             },
             // fetch customApp data here 2nd
             function (fullNames, callback) {
-                console.log("fullNames ",fullNames)
-                currentConnection.metadata.read('ApexTrigger', fullNames, function (err, metadata) {
+                console.log("fullNames ",fullNames);
+                let fullname = '';
+                currentConnection.tooling.sobject('ApexTrigger')
+                  .find({ TableEnumOrId: "Property__c" })
+                  .execute(function(err, records) {
+                    if (err) { 
+                        console.error(err); 
+                        return callback(err);
+                    }
+                    console.log("fetched : " + records.length);
+                    for (var i=0; i < records.length; i++) {
+                      var record = records[i]; 
+                      console.log("\n\n record \n\n",JSON.stringify(record));
+                      console.log('Id: ' + record.Id);
+                      console.log('Name: ' + record.Name);
+                      console.log('FullName: ' + record.FullName);
+                      fullname = record.Id;
+                    }
+                    callback(null, fullname);
+
+                  });
+                /*currentConnection.metadata.read('ApexTrigger', fullNames, function (err, metadata) {
+                    if (err) {
+                        console.error("Error in meta data read customApp 2", JSON.stringify(err));
+                        return callback(err);
+                    } else {
+                        console.log("success fetched meta data here -- 2", JSON.stringify(metadata));
+                        callback(null, metadata);
+                    }
+                });*/
+            },
+            function(fullname, callback) {
+                console.log("fullname ",fullname)
+                /*var metadata = [{
+                  fullName: fullname,
+                  status: 'Inactive'
+                }]
+                currentConnection.metadata.update('ApexTrigger', metadata, function(err, results) {
+                  if (err) { 
+                    console.error(err); 
+                    return callback(err);
+                  }
+                  console.log("\n\n results \n\n",JSON.stringify(results));
+                  for (var i=0; i < results.length; i++) {
+                    var result = results[i];
+                    console.log('success ? : ' + result.success);
+                    console.log('fullName : ' + result.fullName);
+                  }
+                });*/
+            }
+        ], function (error, metadata) {
+            if (error) {
+                res.status(400).send({type:"error", message: 'Error while showing metadata.', error: error });
+            } else {
+                res.status(200).send({ type:"success",message: 'Successfully showing.', metadata:metadata});
+            }
+        });
+    }
+
+    /**
+     * Retrieve Custom Objects 
+     */
+    retrieveCustomObjects(req, res, next) {
+        console.log("custom objects metadata retireve  api call here", req.body);
+        async.waterfall([
+           // fetch customApp data here 1st
+            function (callback) {
+                var types = [{type: 'CustomObject', folder: null}];
+                currentConnection.metadata.list(types, '39.0',  function (err, metadata) {
+                    if (err) {
+                        console.error("Error in meta data read customApp 2", JSON.stringify(err));
+                        return callback(err);
+                    } else {
+                        console.log("\n\n CustomObject ",JSON.stringify(metadata))
+                        console.log('CustomObject count: ' + metadata.length);
+                        var fullNames = _.pluck(metadata, 'fullName');
+                        callback(null, fullNames);
+                    }
+                });
+            },
+            // fetch customApp data here 2nd
+            function (fullNames, callback) {
+                console.log("fullNames ",fullNames);
+                /*let fullname = '';
+                currentConnection.tooling.sobject('CustomObject')
+                  .find({ TableEnumOrId: "Property__c" })
+                  .execute(function(err, records) {
+                    if (err) { 
+                        console.error(err); 
+                        return callback(err);
+                    }
+                    console.log("fetched : " + records.length);
+                    for (var i=0; i < records.length; i++) {
+                      var record = records[i]; 
+                      console.log("\n\n record \n\n",JSON.stringify(record));
+                      console.log('Id: ' + record.Id);
+                      console.log('Name: ' + record.Name);
+                      console.log('FullName: ' + record.FullName);
+                      fullname = record.Id;
+                    }
+                    callback(null, fullname);
+
+                  });*/
+                currentConnection.metadata.read('CustomObject', ["Property__c"], function (err, metadata) {
                     if (err) {
                         console.error("Error in meta data read customApp 2", JSON.stringify(err));
                         return callback(err);
@@ -209,6 +312,25 @@ export class MetaDataRouter {
                         callback(null, metadata);
                     }
                 });
+            },
+            function(fullname, callback) {
+                console.log("fullname ",fullname)
+                /*var metadata = [{
+                  fullName: fullname,
+                  status: 'Inactive'
+                }]
+                currentConnection.metadata.update('ApexTrigger', metadata, function(err, results) {
+                  if (err) { 
+                    console.error(err); 
+                    return callback(err);
+                  }
+                  console.log("\n\n results \n\n",JSON.stringify(results));
+                  for (var i=0; i < results.length; i++) {
+                    var result = results[i];
+                    console.log('success ? : ' + result.success);
+                    console.log('fullName : ' + result.fullName);
+                  }
+                });*/
             }
         ], function (error, metadata) {
             if (error) {
